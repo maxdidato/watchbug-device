@@ -100,8 +100,8 @@ void httpPost()
     // ToDo: only poll the GPS when we need to. 
     // ToDo: shut down the GPS if we don't need it. 
     // Update the GPS coordinates if possiable
-//    gps.getCoordinates(&lastValid); 
-//
+    gps.getCoordinates(&lastValid); 
+
 //    if( millis() - miniTimer < TIMER_POLL_WITH_DATA ) {
 //        // We are trying to poll sooner then we should.
 //        return  ; // Nothing to do. 
@@ -117,9 +117,9 @@ void httpPost()
 //        }  
 //    } 
 //    miniTimer = millis() ; 
-//    
-//    
     
+    
+   
     // Wake up the modem. 
     // DebugPrint( "Waiting up the GSM modem"); 
   sim900.gsmSleepMode(0);
@@ -350,6 +350,7 @@ void setup_old()
 
 
 void loop(){
+delay(10000);
   httpPost();
 }
 void loop_old()
