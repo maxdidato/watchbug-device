@@ -1,12 +1,12 @@
-void BMA250init(uint8_t pinNum, uint16_t tOut)
+/*void BMA250init(uint8_t pinNum, uint16_t tOut)
 {
-	pinMode(pinNum,INPUT);
-	digitalWrite(pinNum,HIGH);
+//	pinMode(pinNum,INPUT);
+//	digitalWrite(pinNum,HIGH);
 	I2c.begin();
 	I2c.timeOut(tOut);
 	BMA250configureMotion();
 	BMA250configureInterrupts();
-}
+}*/
 
 void BMA250configureMotion()
 {

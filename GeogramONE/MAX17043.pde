@@ -1,22 +1,19 @@
-void MAX17043init(uint8_t pinNum, uint16_t tOut)
+void MAX17043init()
 {
-	pinMode(pinNum,INPUT);
-	digitalWrite(pinNum,HIGH);
-	I2c.begin();
-	I2c.timeOut(tOut);
+	MAX17043sleep(true);
 	MAX17043quickStart();
 	MAX17043setAlertLevel(EEPROM.read(BATTERYLOWLEVEL));
 	MAX17043clearAlertFlag();
 	return;
 }
 
-uint8_t MAX17043quickStart()
-{	/*initiate a quick start*/
+void MAX17043quickStart()
+{	
 	uint8_t fgData[2] = {0x40,0x00}; //MSB is transmitted first
-	return(I2c.write(FUELGAUGE,0x06,fgData,2));
+	I2c.write(FUELGAUGE,0x06,fgData,2);
 }
 
-uint8_t MAX17043setAlertLevel(uint8_t batteryInterruptValue)   //saves as actual percentage
+void MAX17043setAlertLevel(uint8_t batteryInterruptValue)   //saves as actual percentage
 {
 	uint8_t configRegister[2] = {0,0};
 	batteryInterruptValue -= 32;
@@ -24,9 +21,9 @@ uint8_t MAX17043setAlertLevel(uint8_t batteryInterruptValue)   //saves as actual
 	batteryInterruptValue &= 0x1F;  // set 3msb to zero
 	configRegister[1] &= 0xE0;  // zero battery level  , was originally FE
 	configRegister[1] |= batteryInterruptValue; //set new battery level
-	return(I2c.write(FUELGAUGE,0x0C,configRegister,2));
+	I2c.write(FUELGAUGE,0x0C,configRegister,2);
 }
-
+/*
 void MAX17043configureBatteryAlert(uint8_t setAlert)
 {
 	if(!setAlert) //we don't want to use the low battery alert function
@@ -40,7 +37,7 @@ void MAX17043configureBatteryAlert(uint8_t setAlert)
 		digitalWrite(FUELGAUGEPIN,HIGH);
 	}
 }
-
+*/
 uint8_t MAX17043clearAlertFlag()
 {
 	uint8_t configRegister[2] = {0,0};
@@ -69,18 +66,6 @@ uint16_t MAX17043getBatterySOC()
 	return(map(batterySOC,0x0000,0x6400,0,10000));
 }
 
-uint16_t MAX17043getBatteryVoltage()
-{
-	uint16_t batteryVoltage = 0;
-	I2c.read(FUELGAUGE,0x02,2);
-	for(uint8_t i = 0;i < 2;i++)
-	{ 
-		batteryVoltage <<= 8;
-		batteryVoltage |= I2c.receive();
-	}
-	return(batteryVoltage >>= 4);
-}
-
 void MAX17043sleep(bool sleepWake)
 {
 	uint8_t configRegister[2] = {0,0};
@@ -92,10 +77,3 @@ void MAX17043sleep(bool sleepWake)
 	I2c.write(FUELGAUGE,0x0C,configRegister,2);
 }
 
-/*void MAX17043wakeFuelGauge()
-{
-	uint8_t configRegister[2] = {0,0};
-	I2c.read(FUELGAUGE,0x0C,2,configRegister);
-	configRegister[1] &= 0x7F;
-	return(I2c.write(FUELGAUGE,0x0C,configRegister,2));
-}*/

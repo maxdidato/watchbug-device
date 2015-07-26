@@ -47,27 +47,13 @@
 
 // Arduino Uno, Duemilanove, LilyPad, etc
 //
-#elif defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__)
+#elif defined (__AVR_ATmega168__) || defined (__AVR_ATmega328P__)
 
  #define ALTSS_USE_TIMER1
  #define INPUT_CAPTURE_PIN		 8 // receive
  #define OUTPUT_COMPARE_A_PIN		 9 // transmit
  #define OUTPUT_COMPARE_B_PIN		10 // unusable PWM
 
-
-// Arduino Leonardo & Yun (from Cristian Maglie)
-//
-#elif defined(ARDUINO_AVR_YUN) || defined(ARDUINO_AVR_LEONARDO)
-
-  //#define ALTSS_USE_TIMER1
-  //#define INPUT_CAPTURE_PIN		4  // receive
-  //#define OUTPUT_COMPARE_A_PIN	9 // transmit
-  //#define OUTPUT_COMPARE_B_PIN	10 // unusable PWM
-  //#define OUTPUT_COMPARE_C_PIN	11 // unusable PWM
-
-  #define ALTSS_USE_TIMER3
-  #define INPUT_CAPTURE_PIN		13 // receive
-  #define OUTPUT_COMPARE_A_PIN		5 // transmit
 
 
 // Arduino Mega
@@ -90,6 +76,7 @@
 
 // Sanguino
 #elif defined(__AVR_ATmega644P__) || defined(__AVR_ATmega644__)
+
  #define ALTSS_USE_TIMER1
  #define INPUT_CAPTURE_PIN		14 // receive
  #define OUTPUT_COMPARE_A_PIN		13 // transmit

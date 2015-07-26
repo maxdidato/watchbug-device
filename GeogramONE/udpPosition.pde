@@ -1,12 +1,9 @@
-uint8_t udpOrange()
+#if USE_UDP
+uint8_t udpPosition()
 {
 	static bool sendOK = false;
 	if(!sendOK)	
 	{
-		for(uint8_t g = 0; g < 11; g++)
-		{
-			udpReply[g] = EEPROM.read(UDP_REPLY + g);
-		}
 		GSM.println("AT+CGATT?");
 		if(!sim900.confirmAtCommand(": 0",3000))
 		{
@@ -85,27 +82,7 @@ uint8_t udpOrange()
 	GSM.println("AT+CIPSEND");
 	if(!sim900.confirmAtCommand(">",3000))
 	{
-		printEEPROM(IMEI);
-		printEEPROM(UDP_HEADER);
-		GSM.print(lastValid.date);
-		GSM.print(";");
-		GSM.print(lastValid.time);
-		GSM.print(";");
-		GSM.print(lastValid.latitude);
-		GSM.print(";");
-		GSM.print(lastValid.ns);
-		GSM.print(";");
-		GSM.print(lastValid.longitude);
-		GSM.print(";");
-		GSM.print(lastValid.ew);
-		GSM.print(";");
-		GSM.print(lastValid.speed);
-		GSM.print(";");
-		GSM.print(lastValid.course);
-		GSM.print(";");
-		GSM.print(lastValid.altitude);
-		GSM.print(";");
-		GSM.println(lastValid.satellitesUsed);
+		geoUDP();
 		GSM.println((char)0x1A);
 		if(sim900.confirmAtCommand("OK\r\n",3000))
 		{
@@ -113,13 +90,7 @@ uint8_t udpOrange()
 			return 2;
 		}
 		sendOK = true;
-		if(!sim900.confirmAtCommand(udpReply,UDPREPLY_TO))
-		{
-			sendOK = true;
-			return 0;
-		}
-		else
-			return 1; //no response from server
+		return 0;
 	}
 	else
 	{
@@ -127,3 +98,43 @@ uint8_t udpOrange()
 		return 2;
 	}
 }
+
+void geoUDP()
+{
+	printEEPROM(IMEI);
+	printEEPROM(UDP_HEADER);
+	if(lastValid.day < 10)
+		GSM.print("0");
+	GSM.print(lastValid.day,DEC);
+	if(lastValid.month < 10)
+		GSM.print("0");
+	GSM.print(lastValid.month,DEC);
+	GSM.print(lastValid.year,DEC);
+	GSM.print(";");
+	if(lastValid.hour < 10)
+		GSM.print("0");
+	GSM.print(lastValid.hour,DEC);
+	if(lastValid.minute < 10)
+		GSM.print("0");
+	GSM.print(lastValid.minute,DEC);
+	if(lastValid.second < 10)
+		GSM.print("0");
+	GSM.print(lastValid.second,DEC);	
+	GSM.print(";");
+	GSM.print(lastValid.latitude);
+	GSM.print(";");
+	GSM.print(lastValid.ns);
+	GSM.print(";");
+	GSM.print(lastValid.longitude);
+	GSM.print(";");
+	GSM.print(lastValid.ew);
+	GSM.print(";");
+	GSM.print(lastValid.speedKPH);
+	GSM.print(";");
+	GSM.print(lastValid.course);
+	GSM.print(";");
+	GSM.print(lastValid.altitudeM);
+	GSM.print(";");
+	GSM.println(lastValid.satellitesUsed);
+}
+#endif

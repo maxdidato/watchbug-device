@@ -1,6 +1,6 @@
 /* An Alternative Software Serial Library
  * http://www.pjrc.com/teensy/td_libs_AltSoftSerial.html
- * Copyright (c) 2014 PJRC.COM, LLC, Paul Stoffregen, paul@pjrc.com
+ * Copyright (c) 2012 PJRC.COM, LLC, Paul Stoffregen, paul@pjrc.com
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,16 +21,9 @@
  * THE SOFTWARE.
  */
 
-// Version 1.2: Support Teensy 3.x
-//
-// Version 1.1: Improve performance in receiver code
-//
-// Version 1.0: Initial Release
-
-
 #include "AltSoftSerial.h"
-#include "config/AltSoftSerial_Boards.h"
-#include "config/AltSoftSerial_Timers.h"
+#include "config/known_boards.h"
+#include "config/known_timers.h"
 
 /****************************************/
 /**          Initialization            **/
@@ -39,10 +32,9 @@
 static uint16_t ticks_per_bit=0;
 bool AltSoftSerial::timing_error=false;
 
-static uint8_t rx_state;
-static uint8_t rx_byte;
-static uint8_t rx_bit = 0;
-static uint16_t rx_target;
+#define MAX_RX_EVENTS 10
+static volatile uint8_t rx_count=0;
+static uint16_t rx_event[MAX_RX_EVENTS];
 static uint16_t rx_stop_ticks=0;
 static volatile uint8_t rx_buffer_head;
 static volatile uint8_t rx_buffer_tail;
@@ -79,7 +71,7 @@ void AltSoftSerial::init(uint32_t cycles_per_bit)
 	pinMode(INPUT_CAPTURE_PIN, INPUT_PULLUP);
 	digitalWrite(OUTPUT_COMPARE_A_PIN, HIGH);
 	pinMode(OUTPUT_COMPARE_A_PIN, OUTPUT);
-	rx_state = 0;
+	rx_count = 0;
 	rx_buffer_head = 0;
 	rx_buffer_tail = 0;
 	tx_state = 0;
@@ -188,82 +180,68 @@ void AltSoftSerial::flushOutput(void)
 /**            Reception               **/
 /****************************************/
 
-
 ISR(CAPTURE_INTERRUPT)
 {
-	uint8_t state, bit, head;
-	uint16_t capture, target;
-	int16_t offset;
+	uint8_t count;
+	uint16_t capture, current;
 
 	capture = GET_INPUT_CAPTURE();
-	bit = rx_bit;
-	if (bit) {
+	count = rx_count;
+	if (count & 1) {
 		CONFIG_CAPTURE_FALLING_EDGE();
-		rx_bit = 0;
 	} else {
 		CONFIG_CAPTURE_RISING_EDGE();
-		rx_bit = 0x80;
 	}
-	state = rx_state;
-	if (state == 0) {
-		if (!bit) {
-			SET_COMPARE_B(capture + rx_stop_ticks);
-			ENABLE_INT_COMPARE_B();
-			rx_target = capture + ticks_per_bit + ticks_per_bit/2;
-			rx_state = 1;
-		}
-	} else {
-		target = rx_target;
-		while (1) {
-			offset = capture - target;
-			if (offset < 0) break;
-			rx_byte = (rx_byte >> 1) | rx_bit;
+	if (count == 0) {
+		SET_COMPARE_B(capture + rx_stop_ticks);
+		ENABLE_INT_COMPARE_B();
+		rx_event[0] = capture;
+	} else if (count < MAX_RX_EVENTS) {
+		rx_event[count] = capture;
+	}
+	rx_count = count + 1;
+	if (GET_TIMER_COUNT() - capture > ticks_per_bit) {
+		AltSoftSerial::timing_error = true;
+	}
+}
+
+static inline uint8_t analyze(uint8_t count)
+{
+	const uint16_t *p = rx_event;
+	uint8_t out=0xFF, mask=0x01, state=0;
+	uint16_t begin, tmp, target, now=0;
+
+	if (count > MAX_RX_EVENTS) count = MAX_RX_EVENTS;
+	begin = *p++;
+	target = ticks_per_bit + ticks_per_bit / 2;
+	while (--count > 0) {
+		tmp = *p++;
+		now += tmp - begin;
+		begin = tmp;
+		while (now >= target) {
+			if (state == 0) out &= ~mask;
+			mask <<= 1;
 			target += ticks_per_bit;
-			state++;
-			if (state >= 9) {
-				DISABLE_INT_COMPARE_B();
-				head = rx_buffer_head + 1;
-				if (head >= RX_BUFFER_SIZE) head = 0;
-				if (head != rx_buffer_tail) {
-					rx_buffer[head] = rx_byte;
-					rx_buffer_head = head;
-				}
-				CONFIG_CAPTURE_FALLING_EDGE();
-				rx_bit = 0;
-				rx_state = 0;
-				return;
-			}
 		}
-		rx_target = target;
-		rx_state = state;
+		state ^= 1;
 	}
-	//if (GET_TIMER_COUNT() - capture > ticks_per_bit) AltSoftSerial::timing_error = true;
+	return out;
 }
 
 ISR(COMPARE_B_INTERRUPT)
 {
-	uint8_t head, state, bit;
+	uint8_t head;
 
 	DISABLE_INT_COMPARE_B();
 	CONFIG_CAPTURE_FALLING_EDGE();
-	state = rx_state;
-	bit = rx_bit ^ 0x80;
-	while (state < 9) {
-		rx_byte = (rx_byte >> 1) | bit;
-		state++;
-	}
 	head = rx_buffer_head + 1;
 	if (head >= RX_BUFFER_SIZE) head = 0;
 	if (head != rx_buffer_tail) {
-		rx_buffer[head] = rx_byte;
+		rx_buffer[head] = analyze(rx_count);
 		rx_buffer_head = head;
 	}
-	rx_state = 0;
-	CONFIG_CAPTURE_FALLING_EDGE();
-	rx_bit = 0;
+	rx_count = 0;
 }
-
-
 
 int AltSoftSerial::read(void)
 {
@@ -304,14 +282,4 @@ void AltSoftSerial::flushInput(void)
 }
 
 
-#ifdef ALTSS_USE_FTM0
-void ftm0_isr(void)
-{
-	uint32_t flags = FTM0_STATUS;
-	FTM0_STATUS = 0;
-	if (flags & (1<<5)) altss_capture_interrupt();
-	if (flags & (1<<6)) altss_compare_a_interrupt();
-	if (flags & (1<<0)) altss_compare_b_interrupt();
-}
-#endif
 
