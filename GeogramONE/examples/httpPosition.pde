@@ -1,4 +1,4 @@
-#define SETTING_WEBSERVER_URL       "http://salty-beyond-5800.herokuapp.com"
+#define SETTING_WEBSERVER_URL       "http://watchbug-api.herokuapp.com"
 
 // Need to put your provider's APN here
 #define SETTING_GSM_APN             "giffgaff.com"
@@ -6,14 +6,19 @@ void httpPosition()  //send coordinates
 {
         if (lastValid.signalLock){
           sim900.gsmSleepMode(0);
-  	uint16_t geoDataFormat;
-  	uint8_t rssi = sim900.signalQuality();
-  	if(rssi)
-  	{	
-  	  sendHTTP(rssi);		
-  	}
-  	sim900.gsmSleepMode(2);
-        }
+          Serial.println("Ready to send the gps position");  
+  	  uint16_t geoDataFormat;
+  	  uint8_t rssi = sim900.signalQuality();
+          Serial.print("RSSI: ");  
+          Serial.println(rssi);  
+  	  if(rssi)
+  	  {	
+  	    sendHTTP(rssi);		
+  	  }
+  	  sim900.gsmSleepMode(2);
+       }else{
+       Serial.println("THE SIGNAL IS NOT LOCKED");   
+     }
 	
 }
 
@@ -45,7 +50,7 @@ void sendHTTP(uint8_t rssi)
       GSM.print(SETTING_WEBSERVER_URL);
       GSM.print("/geolocations/100"); 
          
-      GSM.print("&?lat=");
+      GSM.print("?lat=");
         if(lastValid.ns == 'S')
 		GSM.print("-");
 	GSM.print(lastValid.latitude[0]);
@@ -53,7 +58,7 @@ void sendHTTP(uint8_t rssi)
 	GSM.print("+");
 	GSM.print(lastValid.latitude + 2);
           
-          GSM.print("&lon=");
+        GSM.print("&long=");
          if(lastValid.ew == 'W')
 		GSM.print("-");
 	GSM.print(lastValid.longitude[0]);
@@ -74,12 +79,14 @@ void sendHTTP(uint8_t rssi)
   
         GSM.println("AT+HTTPACTION=1"); //POST the data
         sim900.confirmAtCommand("ACTION:",5000);
-  
-        delay (3000); 
+   Serial.println("The Data have been sent");  
+        delay(3000); 
+           Serial.println("About to shut the gprs");  
         GSM.println("AT+HTTPTERM"); //terminate http
         sim900.confirmAtCommand("OK",5000);
   
         GSM.println("AT+SAPBR=0,1");// Disconnect GPRS
         sim900.confirmAtCommand("OK",5000);
         sim900.confirmAtCommand("DEACT",5000);
+           Serial.println("all done!!!!!");  
 }

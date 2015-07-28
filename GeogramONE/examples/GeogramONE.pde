@@ -1,3 +1,5 @@
+
+
 /*****************************************************************************
 The Geogram ONE is an open source tracking device/development board based off 
 the Arduino platform.  The hardware design and software files are released 
@@ -13,6 +15,7 @@ under CC-SA v3 license.
 #include <avr/sleep.h>
 #include "SIMCOM.h"
 #include "PA6H.h"
+#include <SimpleTimer.h>
 
 
 AltSoftSerial GSM;
@@ -20,6 +23,9 @@ SIMCOM sim900(&GSM);
 geoSmsData smsData;
 PA6H gps(&Serial); 
 goCoord lastValid;
+
+SimpleTimer timer;
+
 
 
 
@@ -135,16 +141,21 @@ void setup()
 	TCCR2B = 0x00; //when set to 7, set clock prescalar to 1024 and start counting. Stops counter when set to zero
 	PRR = 0x04;  // turn on everything except SPI
 /************************************************/
-
+timer.setInterval(120000, sendGPSCoordinates);
 }
 
+void sendGPSCoordinates(){
+   Serial.println("SENDING COORDINATES");
+gps.getCoordinates(&lastValid, EEPROM.read(TIMEZONE));
+ Serial.println("CALLING GPS HTTP");
+ httpPosition();
+}
 void loop()
 {
-	gps.getCoordinates(&lastValid, EEPROM.read(TIMEZONE));
- 
+	
+ timer.run();
         /*Added for Watchbug, see httpPosition tab for details*/
-        httpPosition();
-
+      
 	if(call)
 	{
 		sim900.gsmSleepMode(0);
