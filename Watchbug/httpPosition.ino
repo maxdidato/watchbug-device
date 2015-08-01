@@ -7,19 +7,19 @@ void httpPosition()  //send coordinates
         if (lastValid.signalLock){
           sim900.gsmSleepMode(0);
           Serial.println("Ready to send the gps position");  
-  	  uint16_t geoDataFormat;
-  	  uint8_t rssi = sim900.signalQuality();
+      uint16_t geoDataFormat;
+      uint8_t rssi = sim900.signalQuality();
           Serial.print("RSSI: ");  
           Serial.println(rssi);  
-  	  if(rssi)
-  	  {	
-  	    sendHTTP(rssi);		
-  	  }
-  	  sim900.gsmSleepMode(2);
+      if(rssi)
+      { 
+        sendHTTP(rssi);   
+      }
+      sim900.gsmSleepMode(2);
        }else{
        Serial.println("THE SIGNAL IS NOT LOCKED");   
      }
-	
+  
 }
 
 void sendHTTP(uint8_t rssi)
@@ -52,21 +52,22 @@ void sendHTTP(uint8_t rssi)
          
       GSM.print("?lat=");
         if(lastValid.ns == 'S')
-		GSM.print("-");
-	GSM.print(lastValid.latitude[0]);
-	GSM.print(lastValid.latitude[1]);
-	GSM.print("+");
-	GSM.print(lastValid.latitude + 2);
+    GSM.print("-");
+  GSM.print(lastValid.latitude[0]);
+  GSM.print(lastValid.latitude[1]);
+  GSM.print("+");
+  GSM.print(lastValid.latitude + 2);
           
         GSM.print("&long=");
          if(lastValid.ew == 'W')
-		GSM.print("-");
-	GSM.print(lastValid.longitude[0]);
-	GSM.print(lastValid.longitude[1]);
-	GSM.print(lastValid.longitude[2]);
-	GSM.print("+");
-	GSM.print(lastValid.longitude + 3);
-         
+    GSM.print("-");
+  GSM.print(lastValid.longitude[0]);
+  GSM.print(lastValid.longitude[1]);
+  GSM.print(lastValid.longitude[2]);
+  GSM.print("+");
+  GSM.print(lastValid.longitude + 3);
+      GSM.print("&bat=");
+        GSM.print(MAX17043getBatterySOC()/100,DEC);   
         GSM.println("\"");    
         sim900.confirmAtCommand("OK",5000);
   

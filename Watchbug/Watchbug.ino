@@ -1,3 +1,4 @@
+#include <SimpleTimer.h>
 
 
 /*****************************************************************************
@@ -15,18 +16,12 @@ under CC-SA v3 license.
 #include <avr/sleep.h>
 #include "SIMCOM.h"
 #include "PA6H.h"
-#include <SimpleTimer.h>
-
 
 AltSoftSerial GSM;
 SIMCOM sim900(&GSM);
 geoSmsData smsData;
 PA6H gps(&Serial); 
 goCoord lastValid;
-
-SimpleTimer timer;
-
-
 
 
 volatile uint32_t sleepTimer2Overflow = 0;
@@ -71,10 +66,10 @@ uint8_t f3Alarm = 0;
 #define USE_GEOFENCE		0
 #define USE_SPEED_ALERT		0
 
+SimpleTimer timer;
 
 void setup()
 {
-  
 /******Initialize communications*****************/
 	Serial.begin(115200);
 	GSM.begin(9600);
@@ -141,21 +136,15 @@ void setup()
 	TCCR2B = 0x00; //when set to 7, set clock prescalar to 1024 and start counting. Stops counter when set to zero
 	PRR = 0x04;  // turn on everything except SPI
 /************************************************/
-timer.setInterval(120000, sendGPSCoordinates);
+timer.setInterval(60000, httpPosition);
+
 }
 
-void sendGPSCoordinates(){
-   Serial.println("SENDING COORDINATES");
-gps.getCoordinates(&lastValid, EEPROM.read(TIMEZONE));
- Serial.println("CALLING GPS HTTP");
- httpPosition();
-}
 void loop()
 {
-	
- timer.run();
-        /*Added for Watchbug, see httpPosition tab for details*/
-      
+	gps.getCoordinates(&lastValid, EEPROM.read(TIMEZONE));
+   timer.run();
+
 	if(call)
 	{
 		sim900.gsmSleepMode(0);

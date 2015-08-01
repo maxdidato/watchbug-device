@@ -1,5 +1,11 @@
 #include <EEPROM.h>
 
+#if defined(ARDUINO) && ARDUINO >= 100
+#include "Arduino.h"
+#else
+#include "WProgram.h"
+#endif
+
 template <class T> int EEPROM_writeAnything(int ee, const T& value)
 {
     const char* p = (const char*)(const void*)&value;
@@ -17,3 +23,4 @@ template <class T> int EEPROM_readAnything(int ee, T& value)
 		*p++ = EEPROM.read(ee++);
     return i;
 }
+
